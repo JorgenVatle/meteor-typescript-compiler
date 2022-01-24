@@ -1,5 +1,6 @@
 import * as ts from "typescript";
 import { bold, dim, reset } from "chalk";
+import * as Path from 'path';
 
 /**
  * compiler-console (could not figure out how to load from separate file/module)
@@ -95,7 +96,7 @@ export class CompilerCache {
   private getContentPath(sourceFilePath: string, type: "js" | "sourceMap") {
     const key = this.getKey(sourceFilePath);
     const extension = type === "sourceMap" ? "js.map" : "js";
-    const result = `${this.cachedFilesRoot}/${key}.${extension}`;
+    const result = Path.join(this.cachedFilesRoot, `${key}.${extension}`);
     return result;
   }
 
@@ -320,16 +321,17 @@ export class MeteorTypescriptCompilerImpl extends BabelCompiler {
     // but Typescript wants the buildInfo file and outDir to be in a stable location relative the source dir
     // so get us back to the source dir version of the directory (it’s the same content, just symlinked so no harm done)
     // see tools/cli/commands.js for details
-    const cacheRootRelativeSource = this.cacheRoot.substring(
-      this.cacheRoot.indexOf("/.meteor/local")
+    const cacheRootRelativeSource = this.cacheRoot.replace(
+        /.*([\/\\]+\.meteor[\/\\]+local.*)/,
+        '$1'
     );
 
     const rootOutDir = ts.sys.resolvePath(
-      `${sourceRoot}${cacheRootRelativeSource}/v2cache`
+        Path.join(sourceRoot, cacheRootRelativeSource, 'v2cache')
     );
 
-    const outDir = `${rootOutDir}/out`;
-    const buildInfoFile = `${rootOutDir}/buildfile.tsbuildinfo`;
+    const outDir = Path.join(rootOutDir, 'out');
+    const buildInfoFile = Path.join(rootOutDir, '/buildfile.tsbuildinfo');
     const cache = new CompilerCache(outDir);
     const optionsToExtend: ts.CompilerOptions = {
       incremental: true,
@@ -494,6 +496,7 @@ export class MeteorTypescriptCompilerImpl extends BabelCompiler {
 
     trace(`Emitting Javascript for ${inputFile.getPathInPackage()}`);
     program.emit(sourceFile, function (fileName, data, writeByteOrderMark) {
+      info(`emitForSource() filename: ${fileName}`)
       cache.writeEmittedFile(fileName, data, writeByteOrderMark);
     });
 
