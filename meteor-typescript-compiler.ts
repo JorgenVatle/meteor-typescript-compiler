@@ -631,16 +631,11 @@ export class MeteorTypescriptCompilerImpl extends BabelCompiler {
 
       if (!this.lastCompileTime) {
         warn('No TypeScript files were compiled. Restarting watchers...')
-        for (const rootDir in this.cachedWatchers) {
-          const { watch } = this.cachedWatchers.get(rootDir) || {};
-          if (!watch) {
-            error(`Unable to locate watcher for ${rootDir}!`);
-            return;
-          }
+        this.cachedWatchers.forEach(({ watch }, rootDir) => {
           watch.close();
           this.createWatcher(rootDir);
           info(`Restarted watcher for ${rootDir}`);
-        }
+        })
       }
     }
 
