@@ -237,7 +237,7 @@ export class MeteorTypescriptCompilerImpl extends BabelCompiler {
     buildInfoFile: string,
     sourceRoot: string
   ) {
-    const startTime = Date.now();
+    const startTime = this.lastCompileTime = Date.now();
     this.clearStats();
 
     const diagnostics = [
@@ -632,7 +632,6 @@ export class MeteorTypescriptCompilerImpl extends BabelCompiler {
 
     // Reset since this method gets called once for each resourceSlot
     this.clearStats();
-    this.lastCompileTime = 0;
   }
 
   processFilesForTarget(inputFiles: MeteorCompiler.InputFile[]) {
@@ -652,7 +651,7 @@ export class MeteorTypescriptCompilerImpl extends BabelCompiler {
     // This both produces all dirty files and provides us an instance to emit ad-hoc in case a file went missing
     const program = watch.getProgram();
 
-    if (!this.lastCompileTime) {
+    if (!this.lastCompileTime || this.lastCompileTime < Date.now() - 1000) {
       warn('No TypeScript files were compiled. Restarting watchers...')
       watch.close();
       this.createWatcher(sourceRoot);
