@@ -74,7 +74,7 @@ interface CacheContainer {
 function tryParse<T>(s: string): T | undefined {
   try {
     return JSON.parse(s);
-  } catch (e) {
+  } catch (e: any) {
     error(`${e.message} when parsing ${s}`);
   }
   return undefined;
@@ -594,7 +594,7 @@ export class MeteorTypescriptCompilerImpl extends BabelCompiler {
           hash,
         };
       });
-    } catch (e) {
+    } catch (e: any) {
       error(e.message);
     }
   }
@@ -666,6 +666,10 @@ export class MeteorTypescriptCompilerImpl extends BabelCompiler {
     const compilableFiles = inputFiles.filter(isCompilableFile);
     for (const inputFile of compilableFiles) {
       this.emitResultFor(inputFile, program, cache);
+    }
+    if (!this.numFilesWritten) {
+      info('Detected no written file. Watcher may be broken. Re-creating one!.')
+      this.createWatcher(sourceRoot);
     }
   }
 }
