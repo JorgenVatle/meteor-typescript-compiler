@@ -628,15 +628,6 @@ export class MeteorTypescriptCompilerImpl extends BabelCompiler {
           `${this.numEmittedFiles} files emitted ad-hoc (cache inconsistency)`
         );
       }
-
-      if (!this.lastCompileTime) {
-        warn('No TypeScript files were compiled. Restarting watchers...')
-        this.cachedWatchers.forEach(({ watch }, rootDir) => {
-          watch.close();
-          this.createWatcher(rootDir);
-          info(`Restarted watcher for ${rootDir}`);
-        })
-      }
     }
 
     // Reset since this method gets called once for each resourceSlot
@@ -650,17 +641,23 @@ export class MeteorTypescriptCompilerImpl extends BabelCompiler {
     }
 
     const firstInput = inputFiles[0];
-    const sourceRoot =
-      firstInput.getSourceRoot(false) || ts.sys.getCurrentDirectory();
+    const sourceRoot = firstInput.getSourceRoot(false) || ts.sys.getCurrentDirectory();
     info(
       `Typescript processing requested for ${firstInput.getArch()} using Typescript ${
         ts.version
       }`
     );
 
-    const { watch, cache } = this.getWatcherFor(sourceRoot);
+    let { watch, cache } = this.getWatcherFor(sourceRoot);
     // This both produces all dirty files and provides us an instance to emit ad-hoc in case a file went missing
     const program = watch.getProgram();
+
+    if (!this.lastCompileTime) {
+      warn('No TypeScript files were compiled. Restarting watchers...')
+      watch.close();
+      this.createWatcher(sourceRoot);
+      info(`Restarted watcher for ${sourceRoot}`);
+    }
 
     this.clearStats();
     this.processStartTime = Date.now();
