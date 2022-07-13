@@ -455,7 +455,6 @@ export class MeteorTypescriptCompilerImpl extends BabelCompiler {
     cache: CompilerCache
   ) {
     this.numFilesWritten++;
-    console.log({ numFilesWritten: this.numFilesWritten });
     cache.writeEmittedFile(targetPath, data, writeByteOrderMark);
   }
 
