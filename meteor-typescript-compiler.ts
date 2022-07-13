@@ -1,6 +1,6 @@
-import * as ts from "typescript";
-import { bold, dim, reset } from "chalk";
+import { bold, dim, reset } from 'chalk';
 import * as Path from 'path';
+import * as ts from 'typescript';
 
 /**
  * compiler-console (could not figure out how to load from separate file/module)
@@ -205,6 +205,7 @@ export class MeteorTypescriptCompilerImpl extends BabelCompiler {
   private numFilesFromCache = 0;
   private numFilesWritten = 0;
   private processStartTime = 0;
+  private lastCompileTime = 0;
 
   /**
    * Used to inject the source map into the babel compilation
@@ -296,6 +297,7 @@ export class MeteorTypescriptCompilerImpl extends BabelCompiler {
     this.writeDiagnostics(emitResult.diagnostics, sourceRoot);
     const endTime = Date.now();
     const delta = endTime - startTime;
+    this.lastCompileTime = endTime;
     info(
       `Compilation finished in ${msToSec(delta)} seconds. ${
         this.numCompiledFiles
@@ -398,7 +400,9 @@ export class MeteorTypescriptCompilerImpl extends BabelCompiler {
       case ts.DiagnosticCategory.Error:
         return error(message);
       case ts.DiagnosticCategory.Warning:
+        return warn(message);
       case ts.DiagnosticCategory.Suggestion:
+        return info(message)
       case ts.DiagnosticCategory.Message:
         return info(message);
     }
@@ -451,6 +455,7 @@ export class MeteorTypescriptCompilerImpl extends BabelCompiler {
     cache: CompilerCache
   ) {
     this.numFilesWritten++;
+    console.log({ numFilesWritten: this.numFilesWritten });
     cache.writeEmittedFile(targetPath, data, writeByteOrderMark);
   }
 
@@ -626,8 +631,23 @@ export class MeteorTypescriptCompilerImpl extends BabelCompiler {
       }
     }
 
+    if (!this.lastCompileTime) {
+      info('No TypeScript files were compiled. Restarting watchers...')
+      for (const rootDir in this.cachedWatchers) {
+        const { watch } = this.cachedWatchers.get(rootDir) || {};
+        if (!watch) {
+          error(`Unable to locate watcher for ${rootDir}!`);
+          return;
+        }
+        watch.close();
+        this.createWatcher(rootDir);
+        info(`Restarted watcher for ${rootDir}`);
+      }
+    }
+
     // Reset since this method gets called once for each resourceSlot
     this.clearStats();
+    this.lastCompileTime = 0;
   }
 
   processFilesForTarget(inputFiles: MeteorCompiler.InputFile[]) {
@@ -666,10 +686,6 @@ export class MeteorTypescriptCompilerImpl extends BabelCompiler {
     const compilableFiles = inputFiles.filter(isCompilableFile);
     for (const inputFile of compilableFiles) {
       this.emitResultFor(inputFile, program, cache);
-    }
-    if (!this.numFilesWritten) {
-      info('Detected no written file. Watcher may be broken. Re-creating one!.')
-      this.createWatcher(sourceRoot);
     }
   }
 }
