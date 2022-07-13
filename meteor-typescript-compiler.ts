@@ -1,4 +1,5 @@
 import { bold, dim, reset } from 'chalk';
+import { Meteor } from 'meteor/meteor';
 import * as Path from 'path';
 import * as ts from 'typescript';
 
@@ -651,11 +652,13 @@ export class MeteorTypescriptCompilerImpl extends BabelCompiler {
     // This both produces all dirty files and provides us an instance to emit ad-hoc in case a file went missing
     const program = watch.getProgram();
 
-    if (!this.lastCompileTime || this.lastCompileTime < Date.now() - 1000) {
-      warn('No TypeScript files were compiled. Restarting watchers...')
-      watch.close();
-      this.createWatcher(sourceRoot);
-      info(`Restarted watcher for ${sourceRoot}`);
+    if (Meteor.isDevelopment) {
+      if (!this.lastCompileTime || this.lastCompileTime < Date.now() - 1000) {
+        warn('No TypeScript files were compiled. Restarting watchers...')
+        watch.close();
+        this.createWatcher(sourceRoot);
+        info(`Restarted watcher for ${sourceRoot}`);
+      }
     }
 
     this.clearStats();
